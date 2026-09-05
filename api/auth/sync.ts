@@ -5,12 +5,24 @@ import { createClient } from '@supabase/supabase-js';
 
 if (!getApps().length) {
   const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (serviceAccountEnv) {
+  if (!serviceAccountEnv) {
+    throw new Error('Thiếu biến môi trường FIREBASE_SERVICE_ACCOUNT_JSON trên Vercel.');
+  }
+
+  try {
+    // Parse JSON trực tiếp hoặc tự động sửa lỗi escape xuống dòng trong Private Key
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountEnv);
+    } catch {
+      serviceAccount = JSON.parse(serviceAccountEnv.replace(/\\n/g, '\n'));
+    }
+
     initializeApp({
-      credential: cert(JSON.parse(serviceAccountEnv)),
+      credential: cert(serviceAccount),
     });
-  } else {
-    initializeApp();
+  } catch (error: any) {
+    throw new Error(`Lỗi khởi tạo Firebase Admin: ${error.message}`);
   }
 }
 
