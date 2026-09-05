@@ -19,7 +19,8 @@ export const firebaseApp = isFirebaseConfigured
 export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
 export const firebaseGoogleProvider = new GoogleAuthProvider();
 
-export const firebaseAuthSyncUrl = (import.meta.env.VITE_AUTH_SYNC_URL as string | undefined)?.trim() || '';
+// Đảm bảo URL trỏ đúng tới endpoint /api/auth/sync trên Vercel hoặc biến môi trường
+export const firebaseAuthSyncUrl = (import.meta.env.VITE_AUTH_SYNC_URL as string | undefined)?.trim() || '/api/auth/sync';
 
 export interface SyncedFirebaseUser {
   id: string;
@@ -36,10 +37,18 @@ export async function syncFirebaseIdentity(idToken: string): Promise<SyncedFireb
 
   const response = await fetch(firebaseAuthSyncUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}` // Gửi kèm token xác thực để vượt qua lỗi 401 trên Vercel
+    },
     body: JSON.stringify({ idToken }),
   });
+
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || 'Tài khoản Firebase chưa được ACTIVE hoặc không có quyền truy cập.');
+  
+  if (!response.ok) {
+    throw new Error(body.error || 'Tài khoản Firebase chưa được ACTIVE hoặc không có quyền truy cập.');
+  }
+
   return body.user as SyncedFirebaseUser;
 }
