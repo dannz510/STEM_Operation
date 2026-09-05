@@ -1,4 +1,4 @@
-# STEM-CT Command Center
+# STEM-CT Command Center.
 
 ## Ban Quản lý Tiền cần & Vận hành Sự kiện · Châu Thành STEM
 
