@@ -1,0 +1,6 @@
+{
+  "name": "BAN: QUẢN LÝ TIỀN CẦN & VẬN HÀNH SỰ KIỆN - CHAU THANH STEM",
+  "description": "Hệ thống số hóa quản lý tiền cần, tài sản thiết bị, nhân sự, lịch trực 5S và vận hành sự kiện của Châu Thành STEM.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

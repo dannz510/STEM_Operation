@@ -1,0 +1,322 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ==========================================================================
+   STEM.Lab OS — Studio Minimum & High-Density Bento Design System
+   Pure Clinical Minimalism · Non-AI Look · 5-Second Scanning Rule
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* Pure Light Mode (Chalk White / Off-White Clinical Studio) */
+    --bg-page: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-subtle: #f1f5f9;
+    --bg-inset: #f8fafc;
+    --bg-card: #ffffff;
+
+    /* 1px Precision Line - No Fuzzy Shadows */
+    --border-soft: #e2e8f0;
+    --border-firm: #cbd5e1;
+    --border-strong: #0f172a;
+    --border-focus: #0284c7;
+
+    /* Typography Hierarchy */
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+    --text-quaternary: #cbd5e1;
+
+    /* Single Functional Accent */
+    --accent: #0284c7;
+    --accent-bg: #f0f9ff;
+    --accent-border: #bae6fd;
+
+    /* Signal Matrix */
+    --signal-ready: #10b981;
+    --signal-ready-bg: #ecfdf5;
+    --signal-ready-border: #a7f3d0;
+
+    --signal-sync: #0284c7;
+    --signal-sync-bg: #f0f9ff;
+    --signal-sync-border: #bae6fd;
+
+    --signal-warn: #d97706;
+    --signal-warn-bg: #fffbeb;
+    --signal-warn-border: #fde68a;
+
+    --signal-critical: #dc2626;
+    --signal-critical-bg: #fef2f2;
+    --signal-critical-border: #fecaca;
+
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 8px;
+
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    /* Obsidian Void & Deep Space Metal */
+    --bg-page: #060913;
+    --bg-surface: rgba(15, 23, 42, 0.95);
+    --bg-subtle: #0b1120;
+    --bg-inset: #090d16;
+    --bg-card: rgba(15, 23, 42, 0.9);
+
+    /* Optical Precision Technical Borders */
+    --border-soft: rgba(51, 65, 85, 0.7);
+    --border-firm: rgba(71, 85, 105, 0.8);
+    --border-strong: #f8fafc;
+    --border-focus: rgba(56, 189, 248, 0.6);
+
+    /* High Contrast Dark Typography */
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --text-quaternary: #64748b;
+
+    /* Single Functional Accent (Cyan Signal) */
+    --accent: #38bdf8;
+    --accent-bg: rgba(2, 132, 199, 0.14);
+    --accent-border: rgba(56, 189, 248, 0.4);
+
+    /* Signal Matrix - Luminescent */
+    --signal-ready: #34d399;
+    --signal-ready-bg: rgba(16, 185, 129, 0.12);
+    --signal-ready-border: rgba(52, 211, 153, 0.35);
+
+    --signal-sync: #38bdf8;
+    --signal-sync-bg: rgba(56, 189, 248, 0.12);
+    --signal-sync-border: rgba(56, 189, 248, 0.35);
+
+    --signal-warn: #fbbf24;
+    --signal-warn-bg: rgba(245, 158, 11, 0.12);
+    --signal-warn-border: rgba(251, 191, 36, 0.35);
+
+    --signal-critical: #f87171;
+    --signal-critical-bg: rgba(239, 68, 68, 0.14);
+    --signal-critical-border: rgba(248, 113, 113, 0.35);
+
+    color-scheme: dark;
+  }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  code, pre, .font-mono, .mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'tnum';
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Plus Jakarta Sans', 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  * {
+    border-color: var(--border-soft);
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  input, textarea, select {
+    font-family: inherit;
+  }
+
+  ::selection {
+    background: var(--accent-border);
+    color: var(--text-primary);
+  }
+}
+
+/* ==========================================================================
+   Theme Adaptations for Existing Tailwind Utilities (Strict Zero-Shadow)
+   ========================================================================== */
+
+html[data-theme='dark'] body,
+html[data-theme='dark'] .app-shell {
+  background-color: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme='dark'] .app-shell [class~='bg-white'] { background-color: var(--bg-surface) !important; }
+html[data-theme='dark'] .app-shell [class~='bg-slate-50'] { background-color: var(--bg-inset) !important; }
+html[data-theme='dark'] .app-shell [class~='bg-slate-100'] { background-color: var(--bg-subtle) !important; }
+html[data-theme='dark'] .app-shell [class~='text-slate-900'] { color: var(--text-primary) !important; }
+html[data-theme='dark'] .app-shell [class~='text-slate-800'],
+html[data-theme='dark'] .app-shell [class~='text-slate-700'] { color: var(--text-secondary) !important; }
+html[data-theme='dark'] .app-shell [class~='text-slate-600'],
+html[data-theme='dark'] .app-shell [class~='text-slate-500'] { color: var(--text-tertiary) !important; }
+html[data-theme='dark'] .app-shell [class~='text-slate-400'] { color: var(--text-quaternary) !important; }
+html[data-theme='dark'] .app-shell [class~='border-slate-100'],
+html[data-theme='dark'] .app-shell [class~='border-slate-200'],
+html[data-theme='dark'] .app-shell [class~='border-slate-300'] { border-color: var(--border-soft) !important; }
+html[data-theme='dark'] .app-shell input,
+html[data-theme='dark'] .app-shell textarea,
+html[data-theme='dark'] .app-shell select {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-firm);
+}
+html[data-theme='dark'] .app-shell input::placeholder,
+html[data-theme='dark'] .app-shell textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   High-Density Bento Grid Architecture & Interactive Tokens
+   ========================================================================== */
+
+/* Bento Card: Clean 1px border, smooth optical border shift on hover */
+.bento-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: none !important;
+  transition: border-color 300ms cubic-bezier(0.16, 1, 0.3, 1), background-color 200ms ease;
+}
+
+.bento-card:hover {
+  border-color: var(--border-firm);
+}
+
+html[data-theme='dark'] .bento-card:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+/* Bento Matrix Card: square-focused, at-a-glance scanning */
+.bento-matrix-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none !important;
+}
+
+.bento-matrix-card:hover {
+  border-color: var(--accent);
+  background-color: var(--bg-inset);
+  transform: translateY(-1px);
+}
+
+html[data-theme='dark'] .bento-matrix-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
+/* Top Command Control Bar */
+.bento-header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-soft);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+html[data-theme='dark'] .bento-header {
+  background-color: rgba(6, 9, 19, 0.88);
+  border-bottom-color: var(--border-soft);
+}
+
+/* Signal Pills: Ultra clean, 1px border, no glow blur */
+.signal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.signal-ready {
+  background-color: var(--signal-ready-bg);
+  color: var(--signal-ready);
+  border: 1px solid var(--signal-ready-border);
+}
+
+.signal-sync {
+  background-color: var(--signal-sync-bg);
+  color: var(--signal-sync);
+  border: 1px solid var(--signal-sync-border);
+}
+
+.signal-warn {
+  background-color: var(--signal-warn-bg);
+  color: var(--signal-warn);
+  border: 1px solid var(--signal-warn-border);
+}
+
+.signal-critical {
+  background-color: var(--signal-critical-bg);
+  color: var(--signal-critical);
+  border: 1px solid var(--signal-critical-border);
+}
+
+.signal-neutral {
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-soft);
+}
+
+/* Monospace Metric Display */
+.metric {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Micro Focus Ring */
+.focus-ring:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Scrollbar Minimalist */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-firm); }
+
+/* Slide animations */
+@keyframes slide-in-drawer {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-drawer {
+  animation: slide-in-drawer 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Subtle pulse */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 1.8s ease-in-out infinite;
+}

@@ -1,0 +1,75 @@
+:root {
+    --bg-color: #F8FAFC; /* Light background color */
+    --card-bg-color: #FFFFFF; /* White card background */
+    --border-color: #E5E7EB; /* Light border color */
+    --text-color: #1F2937; /* Dark text color */
+    --accent-color: #3B82F6; /* Sapphire blue accent color */
+    --emerald-color: #10B981; /* Emerald color for success */
+    --amber-color: #F59E0B; /* Amber color for warning */
+    --red-color: #EF4444; /* Red color for errors */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+}
+
+a {
+    text-decoration: none;
+    color: var(--accent-color);
+}
+
+button {
+    cursor: pointer;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th, .table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+    background-color: var(--bg-color);
+}
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--emerald-color);
+    color: white;
+    padding: 12px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease;
+}
