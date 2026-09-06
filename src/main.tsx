@@ -1,8 +1,11 @@
 import { lazy, StrictMode, Suspense } from 'react';
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { AuthGate } from './components/auth/AuthGate';
+import { inject } from '@vercel/analytics';
+
+inject();
 
 const FirebaseAuthGate = lazy(() => import('./components/auth/FirebaseAuthGate').then((module) => ({ default: module.FirebaseAuthGate })));
 
