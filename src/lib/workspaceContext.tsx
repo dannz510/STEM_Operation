@@ -22,6 +22,8 @@ export interface WorkspaceContextValue {
   isResolvingWorkspace: boolean;
   /** True if user is in guest/offline mode (no auth) */
   isGuest: boolean;
+  /** Force refresh workspace resolution */
+  refreshWorkspace: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue>({
@@ -31,11 +33,10 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
   workspaceId: null,
   isResolvingWorkspace: false,
   isGuest: false,
+  refreshWorkspace: async () => {},
 });
 
 // ─── Firebase User Bridge ─────────────────────────────────────────────────────
-// FirebaseAuthGate stores the synced user in sessionStorage so WorkspaceProvider
-// can read it without re-fetching the token.
 
 const FIREBASE_USER_SESSION_KEY = 'stem_v3_fb_user';
 
@@ -58,10 +59,6 @@ function readFirebaseUser(): SyncedFirebaseUser | null {
 
 // ─── Workspace Resolution ─────────────────────────────────────────────────────
 
-/**
- * Resolves the first active workspace for the current user.
- * If none exists, creates a default personal workspace automatically.
- */
 async function resolveOrCreateWorkspace(userId: string): Promise<string | null> {
   if (!supabase || !isSupabaseConfigured) return null;
 
@@ -129,31 +126,46 @@ async function resolveOrCreateWorkspace(userId: string): Promise<string | null> 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 const WORKSPACE_CACHE_KEY = 'stem_v3_workspace_id';
+const WORKSPACE_USER_CACHE_KEY = 'stem_v3_workspace_owner_uid';
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<SyncedFirebaseUser | null>(null);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(
-    () => window.localStorage.getItem(WORKSPACE_CACHE_KEY),
-  );
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [isResolvingWorkspace, setIsResolvingWorkspace] = useState(false);
   const isGuest = window.localStorage.getItem('stem_v3_guest_mode') === 'true';
 
-  const resolveWorkspace = useCallback(async (uid: string) => {
-    // Short-circuit if we already have a cached workspace
-    const cached = window.localStorage.getItem(WORKSPACE_CACHE_KEY);
-    if (cached) {
-      setWorkspaceId(cached);
-      return;
-    }
+  const userId = session?.user?.id ?? firebaseUser?.id ?? null;
+
+  const resolveWorkspace = useCallback(async (uid: string, force = false) => {
+    if (!uid) return;
 
     setIsResolvingWorkspace(true);
-    const resolved = await resolveOrCreateWorkspace(uid);
-    if (resolved) {
-      window.localStorage.setItem(WORKSPACE_CACHE_KEY, resolved);
-      setWorkspaceId(resolved);
+    try {
+      // Check if cached workspace belongs to the exact same user
+      const cachedUid = window.localStorage.getItem(WORKSPACE_USER_CACHE_KEY);
+      const cachedWorkspace = window.localStorage.getItem(WORKSPACE_CACHE_KEY);
+
+      if (!force && cachedUid === uid && cachedWorkspace) {
+        setWorkspaceId(cachedWorkspace);
+        setIsResolvingWorkspace(false);
+        return;
+      }
+
+      // Resolve from database
+      const resolved = await resolveOrCreateWorkspace(uid);
+      if (resolved) {
+        window.localStorage.setItem(WORKSPACE_CACHE_KEY, resolved);
+        window.localStorage.setItem(WORKSPACE_USER_CACHE_KEY, uid);
+        setWorkspaceId(resolved);
+      } else {
+        setWorkspaceId(null);
+      }
+    } catch (err) {
+      console.error('[WorkspaceContext] Error in resolveWorkspace:', err);
+    } finally {
+      setIsResolvingWorkspace(false);
     }
-    setIsResolvingWorkspace(false);
   }, []);
 
   // Supabase session listener
@@ -164,6 +176,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       if (data.session?.user?.id) {
         void resolveWorkspace(data.session.user.id);
+      } else {
+        window.localStorage.removeItem(WORKSPACE_CACHE_KEY);
+        window.localStorage.removeItem(WORKSPACE_USER_CACHE_KEY);
+        setWorkspaceId(null);
       }
     });
 
@@ -172,8 +188,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (nextSession?.user?.id) {
         void resolveWorkspace(nextSession.user.id);
       } else {
-        // Logged out — clear workspace cache
+        // Logged out — clear workspace cache & user scope
         window.localStorage.removeItem(WORKSPACE_CACHE_KEY);
+        window.localStorage.removeItem(WORKSPACE_USER_CACHE_KEY);
         setWorkspaceId(null);
       }
     });
@@ -187,12 +204,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const fb = readFirebaseUser();
     if (fb) {
       setFirebaseUser(fb);
-      // Firebase users use their ID as workspace key (resolved by backend)
       void resolveWorkspace(fb.id);
     }
   }, [resolveWorkspace]);
 
-  const userId = session?.user?.id ?? firebaseUser?.id ?? null;
+  const refreshWorkspace = useCallback(async () => {
+    if (userId) {
+      await resolveWorkspace(userId, true);
+    }
+  }, [userId, resolveWorkspace]);
 
   const value: WorkspaceContextValue = {
     session,
@@ -201,6 +221,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     workspaceId,
     isResolvingWorkspace,
     isGuest,
+    refreshWorkspace,
   };
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

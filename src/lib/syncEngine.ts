@@ -125,11 +125,19 @@ export async function pushSyncPayload<T extends Record<string, unknown>>(
 
   try {
     if (payload.action === 'DELETE') {
+      const payloadData = payload.data as unknown as { id?: string };
+      const recordId = payloadData?.id;
+
+      if (!recordId) {
+        return { success: false, error: 'Missing record ID for DELETE operation' };
+      }
+
       const { error } = await supabase
         .from(table)
         .delete()
-        .eq('id', (payload.data as { id: string }).id)
+        .eq('id', recordId)
         .eq('workspace_id', workspaceId);
+      
       if (error) return { success: false, error: error.message };
       return { success: true };
     }

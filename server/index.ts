@@ -8,11 +8,19 @@ const port = Number(process.env.AUTH_SERVER_PORT ?? 8787);
 app.use(express.json());
 app.use((request, response, next) => {
   const origin = request.headers.origin;
-  if (origin === 'http://127.0.0.1:3000' || origin === 'http://127.0.0.1:3004' || origin === 'http://localhost:3000' || origin === 'http://localhost:3004') {
-    response.setHeader('Access-Control-Allow-Origin', origin);
-    response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  const allowedOrigins = [
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3004',
+    'http://localhost:3000',
+    'http://localhost:3004',
+  ];
+
+  if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    response.setHeader('Access-Control-Allow-Origin', origin || '*');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   }
+
   if (request.method === 'OPTIONS') {
     response.sendStatus(204);
     return;

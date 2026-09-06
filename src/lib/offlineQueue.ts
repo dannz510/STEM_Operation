@@ -35,7 +35,7 @@ export interface OfflineCommand<TPayload = Record<string, unknown>> {
 }
 
 const DATABASE_NAME = 'stem-lab-os';
-const DATABASE_VERSION = 2; // bumped from 1 → 2 for new store indices
+const DATABASE_VERSION = 3; // bumped to 3 to ensure all auxiliary object stores are provisioned
 const STORE_NAME = 'offline-commands';
 const MAX_ATTEMPTS = 3;
 
@@ -54,13 +54,31 @@ function openQueue(): Promise<IDBDatabase> {
     const request = window.indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
     request.onerror = () => reject(request.error ?? new Error('Unable to open offline queue.'));
     request.onsuccess = () => resolve(request.result);
-    request.onupgradeneeded = () => {
-      const database = request.result;
+    request.onupgradeneeded = (event) => {
+      const database = (event.target as IDBOpenDBRequest).result;
+
+      // Ensure main offline commands store exists with indices
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         const store = database.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('status', 'status', { unique: false });
         store.createIndex('createdAt', 'createdAt', { unique: false });
         store.createIndex('type', 'type', { unique: false });
+      }
+
+      // Ensure all shared app stores exist to prevent "NotFoundError: One of the specified object stores was not found"
+      const auxiliaryStores = [
+        { name: 'tasks', keyPath: 'id', autoIncrement: false },
+        { name: 'schedules', keyPath: 'id', autoIncrement: false },
+        { name: 'mutation_queue', keyPath: 'id', autoIncrement: true },
+      ];
+
+      for (const storeConfig of auxiliaryStores) {
+        if (!database.objectStoreNames.contains(storeConfig.name)) {
+          database.createObjectStore(storeConfig.name, {
+            keyPath: storeConfig.keyPath,
+            autoIncrement: storeConfig.autoIncrement,
+          });
+        }
       }
     };
   });

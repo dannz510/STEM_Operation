@@ -65,7 +65,7 @@ export function useSupabaseCollection<T extends { id: string }>(
         setData((current) => {
           const hasSyncableFields = result.length > 0 && 'updated_at' in (result[0] ?? {});
           if (!hasSyncableFields || current === initialFallback) {
-            return result as T[];
+            return result as unknown as T[];
           }
           // Normalise DB snake_case updated_at → camelCase updatedAt for LWW merge
           const normalised = result.map((row: Record<string, unknown>) => ({
@@ -111,10 +111,11 @@ export function useSupabaseCollection<T extends { id: string }>(
           const { eventType, new: newRecord, old: oldRecord } = payload;
 
           if (eventType === 'INSERT') {
+            const rawNew = newRecord as Record<string, unknown>;
             const incoming = {
-              ...newRecord,
-              updatedAt: (newRecord as Record<string, unknown>).updated_at ?? new Date().toISOString(),
-            } as T;
+              ...rawNew,
+              updatedAt: rawNew.updated_at ?? rawNew.updatedAt ?? new Date().toISOString(),
+            } as unknown as T;
             setData((prev) => {
               const exists = prev.some((item) => item.id === incoming.id);
               return exists ? prev : [incoming, ...prev];
@@ -122,10 +123,11 @@ export function useSupabaseCollection<T extends { id: string }>(
           }
 
           if (eventType === 'UPDATE') {
+            const rawNew = newRecord as Record<string, unknown>;
             const incoming = {
-              ...newRecord,
-              updatedAt: (newRecord as Record<string, unknown>).updated_at ?? new Date().toISOString(),
-            } as T & SyncableEntity;
+              ...rawNew,
+              updatedAt: rawNew.updated_at ?? rawNew.updatedAt ?? new Date().toISOString(),
+            } as unknown as (T & SyncableEntity);
             setData((prev) =>
               prev.map((item) => {
                 if (item.id !== incoming.id) return item;
@@ -139,7 +141,8 @@ export function useSupabaseCollection<T extends { id: string }>(
           }
 
           if (eventType === 'DELETE') {
-            const deletedId = (oldRecord as Record<string, unknown>).id as string | undefined;
+            const rawOld = oldRecord as Record<string, unknown>;
+            const deletedId = rawOld.id as string | undefined;
             if (deletedId) {
               setData((prev) => prev.filter((item) => item.id !== deletedId));
             }
@@ -172,8 +175,9 @@ export function useSupabaseCollection<T extends { id: string }>(
       }
       if (inserted && inserted.length > 0) {
         setData((prev) => {
-          const exists = prev.some((item) => item.id === (inserted[0] as T).id);
-          return exists ? prev : [inserted[0] as T, ...prev];
+          const insertedItem = inserted[0] as unknown as T;
+          const exists = prev.some((item) => item.id === insertedItem.id);
+          return exists ? prev : [insertedItem, ...prev];
         });
         return inserted[0];
       }
@@ -190,9 +194,10 @@ export function useSupabaseCollection<T extends { id: string }>(
   ) => {
     // Optimistic update
     setData((prev) =>
-      prev.map((item: Record<string, unknown>) =>
-        item[idKey] === id ? { ...item, ...updatedFields } as T : item as T,
-      ),
+      prev.map((item: T) => {
+        const itemRecord = item as unknown as Record<string, unknown>;
+        return itemRecord[idKey] === id ? ({ ...item, ...updatedFields } as T) : item;
+      }),
     );
 
     if (!isSupabaseConfigured || !supabase) return;
@@ -200,7 +205,7 @@ export function useSupabaseCollection<T extends { id: string }>(
     try {
       const { error: err } = await supabase
         .from(tableName)
-        .update({ ...updatedFields as Record<string, unknown>, updated_at: new Date().toISOString() })
+        .update({ ...(updatedFields as Record<string, unknown>), updated_at: new Date().toISOString() })
         .eq(idKey, id);
 
       if (err) {
@@ -215,7 +220,9 @@ export function useSupabaseCollection<T extends { id: string }>(
 
   const deleteItem = async (id: string | number, idKey = 'id') => {
     // Optimistic delete
-    setData((prev) => prev.filter((item: Record<string, unknown>) => item[idKey] !== id));
+    setData((prev) =>
+      prev.filter((item: T) => (item as unknown as Record<string, unknown>)[idKey] !== id),
+    );
 
     if (!isSupabaseConfigured || !supabase) return;
 
