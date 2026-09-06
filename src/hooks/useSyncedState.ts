@@ -1,7 +1,7 @@
 // src/hooks/useSyncedState.ts
 // Unified state hook that bridges:
-//   1. Supabase (authoritative server)   — online primary source
-//   2. IndexedDB (offline cache)         — persists while offline
+//   1. Supabase (authoritative server)    — online primary source
+//   2. IndexedDB (offline cache)          — persists while offline
 //   3. localStorage (UI prefs fallback)  — legacy compatibility
 //
 // Strategy:
@@ -28,49 +28,75 @@ import {
 // ─── IndexedDB Cache Layer ────────────────────────────────────────────────────
 
 const CACHE_DB_NAME = 'stem-lab-cache';
-const CACHE_DB_VERSION = 1;
+const CACHE_DB_VERSION = 2; // bumped version to pre-provision known stores upfront
+
+const KNOWN_CACHE_STORES = [
+  'tasks',
+  'schedules',
+  'assets',
+  'borrow_logs',
+  'incidents',
+  'profiles',
+  'outbox_events',
+];
+
+let cacheDbPromise: Promise<IDBDatabase> | null = null;
 
 function openCacheDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined' || !window.indexedDB) {
-      reject(new Error('IndexedDB unavailable'));
-      return;
-    }
+  if (typeof window === 'undefined' || !window.indexedDB) {
+    return Promise.reject(new Error('IndexedDB unavailable'));
+  }
+  if (cacheDbPromise) return cacheDbPromise;
+
+  cacheDbPromise = new Promise((resolve, reject) => {
     const req = window.indexedDB.open(CACHE_DB_NAME, CACHE_DB_VERSION);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => {
+      cacheDbPromise = null;
+      reject(req.error);
+    };
     req.onsuccess = () => resolve(req.result);
-    req.onupgradeneeded = () => {
-      // We store each entity collection as its own object store
+    req.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      for (const storeName of KNOWN_CACHE_STORES) {
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName, { keyPath: 'id' });
+        }
+      }
     };
   });
+
+  return cacheDbPromise;
 }
 
 async function ensureCacheStore(storeName: string): Promise<IDBDatabase> {
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    if (typeof window === 'undefined' || !window.indexedDB) {
-      reject(new Error('IndexedDB unavailable'));
-      return;
-    }
-    // Open with incremented version to create the store if missing
-    const existing = window.indexedDB.open(CACHE_DB_NAME);
-    existing.onsuccess = () => {
-      const currentDb = existing.result;
-      if (currentDb.objectStoreNames.contains(storeName)) {
-        resolve(currentDb);
-        return;
-      }
+  const db = await openCacheDb();
+  if (db.objectStoreNames.contains(storeName)) {
+    return db;
+  }
+  
+  // Safe fallback if a dynamic store wasn't in the pre-configured list
+  db.close();
+  cacheDbPromise = null;
+
+  return new Promise((resolve, reject) => {
+    const req = window.indexedDB.open(CACHE_DB_NAME);
+    req.onsuccess = () => {
+      const currentDb = req.result;
       const nextVersion = currentDb.version + 1;
       currentDb.close();
-      const upgrade = window.indexedDB.open(CACHE_DB_NAME, nextVersion);
-      upgrade.onupgradeneeded = () => {
-        upgrade.result.createObjectStore(storeName, { keyPath: 'id' });
+
+      const upgradeReq = window.indexedDB.open(CACHE_DB_NAME, nextVersion);
+      upgradeReq.onupgradeneeded = (ev) => {
+        const upgradedDb = (ev.target as IDBOpenDBRequest).result;
+        if (!upgradedDb.objectStoreNames.contains(storeName)) {
+          upgradedDb.createObjectStore(storeName, { keyPath: 'id' });
+        }
       };
-      upgrade.onsuccess = () => resolve(upgrade.result);
-      upgrade.onerror = () => reject(upgrade.error);
+      upgradeReq.onsuccess = () => resolve(upgradeReq.result);
+      upgradeReq.onerror = () => reject(upgradeReq.error);
     };
-    existing.onerror = () => reject(existing.error);
+    req.onerror = () => reject(req.error);
   });
-  return db;
 }
 
 async function readCache<T>(storeName: string): Promise<T[]> {
@@ -118,6 +144,8 @@ interface UseSyncedStateOptions<T> {
   entity: ReturnType<typeof buildSyncPayload>['entity'];
   /** Offline queue command type for writes */
   writeCommandType: OfflineCommandType;
+  /** Optional specific command type for deletions (auto-derived if omitted) */
+  deleteCommandType?: OfflineCommandType;
   /** Initial data (shown before first fetch, e.g. seeded demo data) */
   fallback: T[];
   /** Whether to enable realtime subscription */
@@ -142,6 +170,7 @@ export function useSyncedState<T extends SyncableEntity>({
   workspaceColumn = 'workspace_id',
   entity,
   writeCommandType,
+  deleteCommandType,
   fallback,
   realtime = true,
 }: UseSyncedStateOptions<T>): SyncedStateResult<T> {
@@ -151,6 +180,17 @@ export function useSyncedState<T extends SyncableEntity>({
   const [pendingCount, setPendingCount] = useState(0);
   const dataRef = useRef<T[]>(fallback);
   useEffect(() => { dataRef.current = data; }, [data]);
+
+  // Automatically derive delete command type if not provided (e.g. UPDATE_TASK -> DELETE_TASK)
+  const resolvedDeleteCommandType = deleteCommandType ?? (
+    writeCommandType.startsWith('UPDATE_') 
+      ? writeCommandType.replace('UPDATE_', 'DELETE_') as OfflineCommandType
+      : writeCommandType.startsWith('CREATE_')
+        ? writeCommandType.replace('CREATE_', 'DELETE_') as OfflineCommandType
+        : writeCommandType.startsWith('UPSERT_')
+          ? writeCommandType.replace('UPSERT_', 'DELETE_') as OfflineCommandType
+          : writeCommandType
+  );
 
   // ─── Load from Cache (offline bootstrap) ───────────────────────────────────
   useEffect(() => {
@@ -258,13 +298,15 @@ export function useSyncedState<T extends SyncableEntity>({
     return () => { void supabase.removeChannel(channel); };
   }, [tableName, workspaceId, workspaceColumn, cacheKey, realtime]);
 
-  // ─── Network Change Listener ────────────────────────────────────────────────
+  // ─── Network Change Listener & Flush ────────────────────────────────────────
   const flush = useCallback(async () => {
     if (!workspaceId) return;
 
     const result = await flushOfflineCommands(async (command) => {
+      const isDelete = command.type.includes('DELETE');
+      const action = isDelete ? 'DELETE' : command.type.includes('CREATE') ? 'CREATE' : 'UPDATE';
       const payload = buildSyncPayload(
-        command.type.includes('CREATE') ? 'CREATE' : command.type.includes('DELETE') ? 'DELETE' : 'UPDATE',
+        action,
         entity,
         command.payload as Record<string, unknown>,
       );
@@ -277,7 +319,6 @@ export function useSyncedState<T extends SyncableEntity>({
     setSyncStatus(count === 0 ? 'synced' : 'pending');
 
     if (result.processed > 0) {
-      // Refresh from server after flushing to ensure consistency
       void fetchFromServer();
     }
   }, [workspaceId, entity, fetchFromServer]);
@@ -293,7 +334,6 @@ export function useSyncedState<T extends SyncableEntity>({
       }
     });
 
-    // Initial pending count
     void getPendingCount().then(setPendingCount);
 
     return unsubscribe;
@@ -302,7 +342,6 @@ export function useSyncedState<T extends SyncableEntity>({
   // ─── Mutations ──────────────────────────────────────────────────────────────
 
   const upsertItem = useCallback(async (item: T) => {
-    // Optimistic update
     setData((prev) => {
       const exists = prev.some((i) => i.id === item.id);
       const next = exists ? prev.map((i) => (i.id === item.id ? item : i)) : [item, ...prev];
@@ -311,7 +350,6 @@ export function useSyncedState<T extends SyncableEntity>({
     });
 
     if (!isOnline() || !workspaceId) {
-      // Queue for later
       await enqueueOfflineCommand({
         type: writeCommandType,
         payload: item as unknown as Record<string, unknown>,
@@ -322,11 +360,9 @@ export function useSyncedState<T extends SyncableEntity>({
       return;
     }
 
-    // Push to Supabase directly
     const payload = buildSyncPayload('UPDATE', entity, item as unknown as Record<string, unknown>);
     const result = await pushSyncPayload(payload, workspaceId);
     if (!result.success) {
-      // Fallback to queue
       await enqueueOfflineCommand({
         type: writeCommandType,
         payload: item as unknown as Record<string, unknown>,
@@ -339,7 +375,6 @@ export function useSyncedState<T extends SyncableEntity>({
 
   const deleteItem = useCallback(async (id: string) => {
     const deleted = dataRef.current.find((i) => i.id === id);
-    // Optimistic delete
     setData((prev) => {
       const next = prev.filter((i) => i.id !== id);
       void writeCache(cacheKey, next);
@@ -348,7 +383,7 @@ export function useSyncedState<T extends SyncableEntity>({
 
     if (!isOnline() || !workspaceId || !deleted) {
       await enqueueOfflineCommand({
-        type: writeCommandType,
+        type: resolvedDeleteCommandType,
         payload: { id } as Record<string, unknown>,
         idempotencyKey: `del-${id}-${Date.now()}`,
       });
@@ -360,14 +395,13 @@ export function useSyncedState<T extends SyncableEntity>({
     const payload = buildSyncPayload('DELETE', entity, { id } as Record<string, unknown>);
     const result = await pushSyncPayload(payload, workspaceId);
     if (!result.success && deleted) {
-      // Rollback
       setData((prev) => {
         const next = [deleted, ...prev];
         void writeCache(cacheKey, next);
         return next;
       });
     }
-  }, [cacheKey, workspaceId, entity, writeCommandType]);
+  }, [cacheKey, workspaceId, entity, resolvedDeleteCommandType]);
 
   return {
     data,
