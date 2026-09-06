@@ -5,7 +5,6 @@ import {
   Sparkles,
   ChevronRight,
   BookOpen,
-  ShieldAlert,
 } from 'lucide-react';
 import { CODEX_SECTIONS } from '../../data/initialData';
 
@@ -17,7 +16,12 @@ export const CodexWikiTab: React.FC = () => {
   const [isAiSearching, setIsAiSearching] = useState(false);
 
   const selectedSection =
-    CODEX_SECTIONS.find((s) => s.id === selectedSectionId) || CODEX_SECTIONS[0];
+    CODEX_SECTIONS.find((s) => s.id === selectedSectionId) ||
+    CODEX_SECTIONS[0] || {
+      id: 'empty',
+      title: 'Chưa có dữ liệu',
+      content: 'Đang cập nhật văn kiện quy tắc...',
+    };
 
   const filteredSections = CODEX_SECTIONS.filter((s) =>
     s.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -172,16 +176,16 @@ export const CodexWikiTab: React.FC = () => {
               VĂN KIỆN CHÍNH THỨC
             </span>
             <h2 className="text-sm font-bold uppercase tracking-tight text-slate-900 dark:text-white mt-1 font-sans">
-              {selectedSection.title}
+              {selectedSection?.title}
             </h2>
           </div>
 
           <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans space-y-2 whitespace-pre-line">
-            {selectedSection.content}
+            {selectedSection?.content}
           </div>
 
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-slate-500 dark:text-slate-400 font-mono text-[9px]">
-            <span>MÃ LƯU TRỮ: WKI-CODEX-{selectedSection.id.toUpperCase()}</span>
+            <span>MÃ LƯU TRỮ: WKI-CODEX-{selectedSection?.id?.toUpperCase() || 'EMPTY'}</span>
             <span>HIỆU LỰC: BAN HẬU CẦN & QUẢN LÝ PHÒNG LAB STEM</span>
           </div>
         </div>
