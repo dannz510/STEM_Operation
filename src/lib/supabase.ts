@@ -1,3 +1,4 @@
+// src/lib/supabase.ts
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = (
@@ -24,7 +25,8 @@ export async function isGoogleAuthEnabled(): Promise<boolean> {
   }
 }
 
-export const supabase: SupabaseClient | null = isSupabaseConfigured
+// Khởi tạo client an toàn kiểu dữ liệu, nếu chưa có env sẽ dùng dummy client để không crash app lúc biên soạn
+export const supabase: SupabaseClient = isSupabaseConfigured
   ? createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: {
         persistSession: true,
@@ -32,12 +34,11 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
         detectSessionInUrl: true,
       },
     })
-  : null;
+  : (createClient('https://placeholder.supabase.co', 'placeholder-key') as SupabaseClient);
 
 export function requireSupabase(): SupabaseClient {
-  if (!supabase) {
-    throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.');
   }
-
   return supabase;
 }

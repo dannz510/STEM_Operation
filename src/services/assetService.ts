@@ -21,6 +21,7 @@ interface AssetRow {
   name: string;
   category: string;
   branch_owner: string | null;
+  /** DB-level enum — subset of TypeScript AssetStatus */
   status: 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'DAMAGED' | 'LOST';
   location: string;
   serial_number: string | null;
@@ -79,14 +80,44 @@ export async function returnAsset(input: {
   return data as AssetBorrowResult;
 }
 
+/**
+ * Maps a Supabase DB asset row to the legacy TypeScript Asset type.
+ *
+ * DB `DAMAGED` enum → `DAMAGED_L1` (lowest severity by default).
+ * DB `LOST` → `DAMAGED_L4` (treated as decommissioned/highest damage).
+ * If the metadata contains a `damage_level` field (1-4), it is used preferentially.
+ */
 export function assetRowToLegacyAsset(row: AssetRow): Asset {
+  // Determine damage level from metadata if available
+  let resolvedStatus: Asset['status'];
+
+  if (row.status === 'DAMAGED') {
+    const level = typeof row.metadata.damage_level === 'number' ? row.metadata.damage_level : 1;
+    const levelMap: Record<number, Asset['status']> = {
+      1: 'DAMAGED_L1',
+      2: 'DAMAGED_L2',
+      3: 'DAMAGED_L3',
+      4: 'DAMAGED_L4',
+    };
+    resolvedStatus = levelMap[level] ?? 'DAMAGED_L1';
+  } else if (row.status === 'LOST') {
+    resolvedStatus = 'DAMAGED_L4';
+  } else {
+    const statusMap: Partial<Record<AssetRow['status'], Asset['status']>> = {
+      AVAILABLE: 'AVAILABLE',
+      IN_USE: 'IN_USE',
+      MAINTENANCE: 'MAINTENANCE',
+    };
+    resolvedStatus = statusMap[row.status] ?? 'MAINTENANCE';
+  }
+
   return {
     id: row.id,
     code: row.code,
     name: row.name,
     category: row.category as Asset['category'],
     branchOwner: (row.branch_owner ?? 'AST-2.1') as Asset['branchOwner'],
-    status: row.status === 'IN_USE' ? 'IN_USE' : row.status === 'AVAILABLE' ? 'AVAILABLE' : 'MAINTENANCE',
+    status: resolvedStatus,
     location: row.location,
     valueVnd: row.value_vnd,
     serialNumber: row.serial_number ?? '',

@@ -70,6 +70,7 @@ export const TaskScheduleTab: React.FC<TaskScheduleTabProps> = ({
       assigneeName: assignee?.name,
       pointsReward: taskPriority === 'URGENT' ? 50 : taskPriority === 'HIGH' ? 30 : 15,
       dueDate: taskDueDate || undefined,
+      updatedAt: new Date().toISOString(),
     });
     setTaskTitle('');
     setTaskDueDate('');
@@ -104,6 +105,7 @@ export const TaskScheduleTab: React.FC<TaskScheduleTabProps> = ({
       endAt: new Date(scheduleEnd).toISOString(),
       status: 'CONFIRMED',
       colorCode: '#0284C7',
+      updatedAt: new Date().toISOString(),
     });
     if (error) {
       setScheduleError(error);
