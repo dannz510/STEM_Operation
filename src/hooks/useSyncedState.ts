@@ -2,7 +2,7 @@
 // Unified state hook that bridges:
 //   1. Supabase (authoritative server)    — online primary source
 //   2. IndexedDB (offline cache)          — persists while offline
-//   3. localStorage (UI prefs fallback)  — legacy compatibility
+//   3. localStorage (UI prefs fallback)   — legacy compatibility
 //
 // Strategy:
 //   - Online:  read/write Supabase; mirror to IndexedDB cache
@@ -28,7 +28,7 @@ import {
 // ─── IndexedDB Cache Layer ────────────────────────────────────────────────────
 
 const CACHE_DB_NAME = 'stem-lab-cache';
-const CACHE_DB_VERSION = 2; // bumped version to pre-provision known stores upfront
+const CACHE_DB_VERSION = 3; // bumped to 3 to match upgraded schema stores
 
 const KNOWN_CACHE_STORES = [
   'tasks',
