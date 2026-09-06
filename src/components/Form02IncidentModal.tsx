@@ -110,6 +110,7 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1 rounded cursor-pointer"
           >
@@ -151,9 +152,11 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
           {/* Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-800 mb-1">Tên sự cố / Mô tả tóm tắt (*)</label>
+              <label htmlFor="incidentTitle" className="block font-bold text-slate-800 mb-1">Tên sự cố / Mô tả tóm tắt (*)</label>
               <input
                 type="text"
+                id="incidentTitle"
+                name="title"
                 required
                 placeholder="VD: Rơi vỡ bàn kính máy in 3D trong quá trình gỡ mẫu in..."
                 value={title}
@@ -163,8 +166,10 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-800 mb-1">Loại hình rủi ro</label>
+              <label htmlFor="incidentCategory" className="block font-bold text-slate-800 mb-1">Loại hình rủi ro</label>
               <select
+                id="incidentCategory"
+                name="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-sky-500"
@@ -179,8 +184,10 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-800 mb-1">Tiểu ban thụ lý</label>
+              <label htmlFor="incidentSubBranch" className="block font-bold text-slate-800 mb-1">Tiểu ban thụ lý</label>
               <select
+                id="incidentSubBranch"
+                name="subBranch"
                 value={subBranch}
                 onChange={(e) => setSubBranch(e.target.value as SubBranchCode)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-sky-500 font-mono"
@@ -196,8 +203,10 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-800 mb-1">Mô tả chi tiết nguyên nhân & hiện trường</label>
+              <label htmlFor="incidentDescription" className="block font-bold text-slate-800 mb-1">Mô tả chi tiết nguyên nhân & hiện trường</label>
               <textarea
+                id="incidentDescription"
+                name="description"
                 rows={2}
                 placeholder="Nguyên nhân chủ quan/khách quan, mã serial máy, thời điểm phát hiện..."
                 value={description}
@@ -207,8 +216,10 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-800 mb-1">Biện pháp khắc phục đã triển khai</label>
+              <label htmlFor="incidentImmediateAction" className="block font-bold text-slate-800 mb-1">Biện pháp khắc phục đã triển khai</label>
               <textarea
+                id="incidentImmediateAction"
+                name="immediateAction"
                 rows={2}
                 placeholder="VD: Đã gỡ bỏ mảnh vỡ kính, cách ly dây cắm nguồn, thay bàn phụ từ kho AST..."
                 value={immediateAction}
@@ -218,9 +229,11 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-800 mb-1">Dự toán bồi thường thiệt hại (VNĐ)</label>
+              <label htmlFor="incidentCompensation" className="block font-bold text-slate-800 mb-1">Dự toán bồi thường thiệt hại (VNĐ)</label>
               <input
                 type="number"
+                id="incidentCompensation"
+                name="compensationVnd"
                 step={50000}
                 placeholder="0"
                 value={compensationVnd}
@@ -230,9 +243,11 @@ export const Form02IncidentModal: React.FC<Form02IncidentModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-800 mb-1">Đầu mối phát ngôn độc quyền (SPOC)</label>
+              <label htmlFor="incidentSpoc" className="block font-bold text-slate-800 mb-1">Đầu mối phát ngôn độc quyền (SPOC)</label>
               <input
                 type="text"
+                id="incidentSpoc"
+                name="spocContact"
                 value={spocContact}
                 onChange={(e) => setSpocContact(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-sky-500 text-[11px]"

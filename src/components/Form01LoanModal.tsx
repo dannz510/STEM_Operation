@@ -86,7 +86,6 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
       <div className="bento-card bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 w-full max-w-2xl rounded-lg overflow-hidden shadow-none animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
         <div className="bg-slate-900 border-b border-slate-800 text-white px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-sky-600 rounded text-white font-bold">
@@ -113,14 +112,14 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 max-h-[78vh] overflow-y-auto space-y-4 text-xs">
-          {/* Asset Selection */}
           <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded border border-slate-200 dark:border-slate-800 space-y-2">
-            <label className="block font-bold text-slate-900 dark:text-white font-mono text-[11px] uppercase tracking-wider">
+            <label htmlFor="assetSelect" className="block font-bold text-slate-900 dark:text-white font-mono text-[11px] uppercase tracking-wider">
               1. Chọn Thiết Bị Cần Bàn Giao
             </label>
             <select
+              id="assetSelect"
+              name="assetId"
               value={currentAsset?.id}
               onChange={(e) => setAssetId(e.target.value)}
               className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded font-mono text-xs outline-none focus:border-sky-500"
@@ -140,12 +139,13 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             )}
           </div>
 
-          {/* Borrower Information */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Họ tên người mượn (*)</label>
+              <label htmlFor="borrowerName" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Họ tên người mượn (*)</label>
               <input
                 type="text"
+                id="borrowerName"
+                name="borrowerName"
                 required
                 placeholder="VD: Nguyễn Văn Nam"
                 value={borrowerName}
@@ -155,9 +155,11 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Số điện thoại liên hệ (*)</label>
+              <label htmlFor="borrowerPhone" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Số điện thoại liên hệ (*)</label>
               <input
                 type="text"
+                id="borrowerPhone"
+                name="borrowerPhone"
                 required
                 placeholder="VD: 0988.123.456"
                 value={borrowerPhone}
@@ -167,8 +169,10 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Đối tượng / Vai trò</label>
+              <label htmlFor="borrowerRole" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Đối tượng / Vai trò</label>
               <select
+                id="borrowerRole"
+                name="borrowerRole"
                 value={borrowerRole}
                 onChange={(e) => setBorrowerRole(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-sky-500 font-sans"
@@ -181,9 +185,11 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Đơn vị / Lớp / Khoa</label>
+              <label htmlFor="borrowerUnit" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Đơn vị / Lớp / Khoa</label>
               <input
                 type="text"
+                id="borrowerUnit"
+                name="borrowerUnit"
                 placeholder="VD: Khoa Cơ Điện Tử K21"
                 value={borrowerUnit}
                 onChange={(e) => setBorrowerUnit(e.target.value)}
@@ -192,11 +198,12 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
           </div>
 
-          {/* Loan Duration & Purpose */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Thời lượng mượn dự kiến</label>
+              <label htmlFor="loanDurationHours" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Thời lượng mượn dự kiến</label>
               <select
+                id="loanDurationHours"
+                name="loanDurationHours"
                 value={loanDurationHours}
                 onChange={(e) => setLoanDurationHours(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-sky-500 font-sans"
@@ -210,9 +217,11 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tiền cọc / Ký gửi (VNĐ)</label>
+              <label htmlFor="depositVnd" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tiền cọc / Ký gửi (VNĐ)</label>
               <input
                 type="number"
+                id="depositVnd"
+                name="depositVnd"
                 step={50000}
                 placeholder="0"
                 value={depositVnd}
@@ -222,9 +231,11 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mục đích sử dụng cụ thể</label>
+              <label htmlFor="purpose" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mục đích sử dụng cụ thể</label>
               <input
                 type="text"
+                id="purpose"
+                name="purpose"
                 placeholder="VD: Cân chỉnh mạch điều khiển động cơ cho giải đấu STEM..."
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
@@ -233,8 +244,10 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tình trạng ngoại quan khi bàn giao</label>
+              <label htmlFor="conditionOnLoan" className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tình trạng ngoại quan khi bàn giao</label>
               <textarea
+                id="conditionOnLoan"
+                name="conditionOnLoan"
                 rows={2}
                 value={conditionOnLoan}
                 onChange={(e) => setConditionOnLoan(e.target.value)}
@@ -243,16 +256,17 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
           </div>
 
-          {/* 3-Layer Proof & Approver */}
           <div className="p-3 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/60 rounded space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-sky-900 dark:text-sky-300 flex items-center gap-1.5 font-mono text-[11px]">
                 <Camera className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                 Xác thực Minh chứng 3 Lớp (CCTV + Đối soát)
               </span>
-              <label className="flex items-center gap-1.5 cursor-pointer">
+              <label htmlFor="cctvVerifiedCheckbox" className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
+                  id="cctvVerifiedCheckbox"
+                  name="cctvVerified"
                   checked={cctvVerified}
                   onChange={(e) => setCctvVerified(e.target.checked)}
                   className="rounded text-sky-600 focus:ring-sky-500"
@@ -265,11 +279,12 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </div>
           </div>
 
-          {/* Legal Agreement */}
           <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded">
-            <label className="flex items-start gap-2 cursor-pointer">
+            <label htmlFor="termsAgreedCheckbox" className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
+                id="termsAgreedCheckbox"
+                name="termsAgreed"
                 required
                 checked={termsAgreed}
                 onChange={(e) => setTermsAgreed(e.target.checked)}
@@ -281,7 +296,6 @@ export const Form01LoanModal: React.FC<Form01LoanModalProps> = ({
             </label>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
