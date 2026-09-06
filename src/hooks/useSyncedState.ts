@@ -1,12 +1,9 @@
 // src/hooks/useSyncedState.ts
 // Unified state hook that bridges:
-//   1. Supabase (authoritative server)    — online primary source
-//   2. IndexedDB (offline cache)          — persists while offline
-//   3. localStorage (UI prefs fallback)   — legacy compatibility
-//
-// Strategy:
-//   - Online:  read/write Supabase; mirror to IndexedDB cache
-//   - Offline: read IndexedDB; queue writes in offlineQueue; flush on reconnect
+//   1. Supabase (authoritative server)     — online primary source
+//   2. IndexedDB (offline cache)           — persists while offline
+//   3. localStorage (UI prefs fallback)    — legacy compatibility
+// Plus built-in Supabase Auth state synchronization.
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SyncableEntity, SyncStatus } from '../types';
@@ -28,7 +25,7 @@ import {
 // ─── IndexedDB Cache Layer ────────────────────────────────────────────────────
 
 const CACHE_DB_NAME = 'stem-lab-cache';
-const CACHE_DB_VERSION = 3; // bumped to 3 to match upgraded schema stores
+const CACHE_DB_VERSION = 3;
 
 const KNOWN_CACHE_STORES = [
   'tasks',
@@ -74,7 +71,6 @@ async function ensureCacheStore(storeName: string): Promise<IDBDatabase> {
     return db;
   }
   
-  // Safe fallback if a dynamic store wasn't in the pre-configured list
   db.close();
   cacheDbPromise = null;
 
@@ -129,26 +125,17 @@ async function writeCache<T>(storeName: string, items: T[]): Promise<void> {
   }
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ─── Data Sync Hook ───────────────────────────────────────────────────────────
 
 interface UseSyncedStateOptions<T> {
-  /** Supabase table name */
   tableName: string;
-  /** Store name for IndexedDB cache (typically same as tableName) */
   cacheKey: string;
-  /** Workspace scope */
   workspaceId: string | null;
-  /** Column for workspace filter */
   workspaceColumn?: string;
-  /** Entity type for SyncPayload routing */
   entity: ReturnType<typeof buildSyncPayload>['entity'];
-  /** Offline queue command type for writes */
   writeCommandType: OfflineCommandType;
-  /** Optional specific command type for deletions (auto-derived if omitted) */
   deleteCommandType?: OfflineCommandType;
-  /** Initial data (shown before first fetch, e.g. seeded demo data) */
   fallback: T[];
-  /** Whether to enable realtime subscription */
   realtime?: boolean;
 }
 
@@ -181,7 +168,6 @@ export function useSyncedState<T extends SyncableEntity>({
   const dataRef = useRef<T[]>(fallback);
   useEffect(() => { dataRef.current = data; }, [data]);
 
-  // Automatically derive delete command type if not provided (e.g. UPDATE_TASK -> DELETE_TASK)
   const resolvedDeleteCommandType = deleteCommandType ?? (
     writeCommandType.startsWith('UPDATE_') 
       ? writeCommandType.replace('UPDATE_', 'DELETE_') as OfflineCommandType
@@ -192,7 +178,6 @@ export function useSyncedState<T extends SyncableEntity>({
           : writeCommandType
   );
 
-  // ─── Load from Cache (offline bootstrap) ───────────────────────────────────
   useEffect(() => {
     void (async () => {
       const cached = await readCache<T>(cacheKey);
@@ -203,7 +188,6 @@ export function useSyncedState<T extends SyncableEntity>({
     })();
   }, [cacheKey]);
 
-  // ─── Fetch from Supabase ────────────────────────────────────────────────────
   const fetchFromServer = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase || !isOnline()) return;
 
@@ -217,14 +201,12 @@ export function useSyncedState<T extends SyncableEntity>({
         return;
       }
 
-      // Normalise updated_at → updatedAt
       const normalised = rows.map((row: Record<string, unknown>) => ({
         ...row,
         updatedAt: (row.updatedAt as string | undefined) ?? (row.updated_at as string | undefined) ?? new Date(0).toISOString(),
         version: (row.version as number | undefined) ?? 0,
       })) as T[];
 
-      // LWW merge with local data
       setData((current) => {
         const merged = mergeWithServerData(current, normalised);
         void writeCache(cacheKey, merged);
@@ -241,7 +223,6 @@ export function useSyncedState<T extends SyncableEntity>({
     void fetchFromServer();
   }, [fetchFromServer]);
 
-  // ─── Realtime Subscription ──────────────────────────────────────────────────
   useEffect(() => {
     if (!realtime || !isSupabaseConfigured || !supabase || !workspaceId) return;
 
@@ -298,7 +279,6 @@ export function useSyncedState<T extends SyncableEntity>({
     return () => { void supabase.removeChannel(channel); };
   }, [tableName, workspaceId, workspaceColumn, cacheKey, realtime]);
 
-  // ─── Network Change Listener & Flush ────────────────────────────────────────
   const flush = useCallback(async () => {
     if (!workspaceId) return;
 
@@ -338,8 +318,6 @@ export function useSyncedState<T extends SyncableEntity>({
 
     return unsubscribe;
   }, [flush, fetchFromServer]);
-
-  // ─── Mutations ──────────────────────────────────────────────────────────────
 
   const upsertItem = useCallback(async (item: T) => {
     setData((prev) => {
@@ -413,4 +391,42 @@ export function useSyncedState<T extends SyncableEntity>({
     deleteItem,
     flushNow: flush,
   };
+}
+
+// ─── Auth Synchronization Hook ────────────────────────────────────────────────
+
+export function useAuthSync() {
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    const syncUserProfile = async (user: any) => {
+      if (!user) return;
+      const { error } = await supabase.rpc('sync_user_profile', {
+        p_uid: user.id,
+        p_email: user.email || '',
+        p_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        p_avatar_url: user.user_metadata?.avatar_url || null,
+      });
+
+      if (error) {
+        console.error('[AuthSync] Failed to sync user profile:', error.message);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        syncUserProfile(session.user);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        syncUserProfile(session.user);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 }

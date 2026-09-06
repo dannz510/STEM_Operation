@@ -91,10 +91,13 @@ const ENTITY_TABLE_MAP: Record<SyncPayload<unknown>['entity'], SupabaseTable> = 
   loan: 'borrow_logs',
   incident: 'incidents',
   member: 'profiles',
-  roster: 'outbox_events', // rosters don't have a dedicated table yet — queue via outbox
+  roster: 'outbox_events', 
   consumable: 'outbox_events',
   merit_log: 'outbox_events',
 };
+
+// Tables that contain an `updated_at` column in the database schema
+const TABLES_WITH_UPDATED_AT = new Set<SupabaseTable>(['tasks', 'assets', 'profiles']);
 
 // ─── Supabase Sync Push ───────────────────────────────────────────────────────
 
@@ -107,6 +110,7 @@ export interface SyncResult {
 /**
  * Pushes a single SyncPayload to Supabase.
  * Uses upsert for CREATE/UPDATE, delete for DELETE.
+ * Handles schema specific constraints (e.g., profiles table lacks workspace_id; some tables lack updated_at).
  */
 export async function pushSyncPayload<T extends Record<string, unknown>>(
   payload: SyncPayload<T>,
@@ -132,26 +136,35 @@ export async function pushSyncPayload<T extends Record<string, unknown>>(
         return { success: false, error: 'Missing record ID for DELETE operation' };
       }
 
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', recordId)
-        .eq('workspace_id', workspaceId);
+      let query = supabase.from(table).delete().eq('id', recordId);
+      
+      // Profiles table does not have workspace_id column
+      if (table !== 'profiles') {
+        query = query.eq('workspace_id', workspaceId);
+      }
+
+      const { error } = await query;
       
       if (error) return { success: false, error: error.message };
       return { success: true };
     }
 
-    // CREATE or UPDATE — use upsert with version bump
-    const record = {
-      ...payload.data,
-      workspace_id: workspaceId,
-      updated_at: new Date(payload.clientTimestamp).toISOString(),
-    };
+    // CREATE or UPDATE — construct record respecting database column constraints
+    const record: Record<string, unknown> = { ...payload.data };
+
+    // Inject workspace_id only for tables that support it (profiles does not)
+    if (table !== 'profiles') {
+      record.workspace_id = workspaceId;
+    }
+
+    // Inject updated_at timestamp only for tables that have the updated_at column
+    if (TABLES_WITH_UPDATED_AT.has(table)) {
+      record.updated_at = new Date(payload.clientTimestamp).toISOString();
+    }
 
     const { data, error } = await supabase
       .from(table)
-      .upsert(record as Record<string, unknown>, { onConflict: 'id' })
+      .upsert(record, { onConflict: 'id' })
       .select()
       .single();
 
@@ -198,8 +211,12 @@ const networkListeners = new Set<NetworkListener>();
 
 export function onNetworkChange(listener: NetworkListener): () => void {
   networkListeners.add(listener);
-  const handleOnline = () => listener(true);
-  const handleOffline = () => listener(false);
+  const handleOnline = () => {
+    networkListeners.forEach((l) => l(true));
+  };
+  const handleOffline = () => {
+    networkListeners.forEach((l) => l(false));
+  };
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
   return () => {
