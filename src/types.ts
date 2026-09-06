@@ -102,25 +102,29 @@ export interface SubBranchInfo {
   jobDescription?: string;
 }
 
-export interface Member {
+export interface Member extends SyncableEntity {
   id: string;
-  code: string;
+  code?: string;
   name: string;
-  studentId: string;
+  studentId?: string;
   email: string;
-  phone: string;
-  branchCode: BranchCode;
-  subBranchCode: SubBranchCode;
-  rank: RankLevel;
+  phone?: string;
+  branchCode?: BranchCode;
+  subBranchCode?: SubBranchCode;
+  rank?: RankLevel;
   meritPoints: number;
   demeritPoints: number;
-  warningLevel: 'NONE' | 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
-  gender: 'MALE' | 'FEMALE';
-  status: 'ACTIVE' | 'ON_DUTY' | 'EXAM_MODE' | 'SUSPENDED';
-  joinedDate: string;
+  currentStreak: number;       // Đồng bộ với cột profiles.current_streak trong DB
+  firebase_uid?: string;       // Đồng bộ với cột profiles.firebase_uid
+  warningLevel?: 'NONE' | 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+  gender?: 'MALE' | 'FEMALE';
+  status: 'ACTIVE' | 'ON_DUTY' | 'EXAM_MODE' | 'SUSPENDED' | 'PENDING'; // Hỗ trợ trạng thái chờ duyệt cho user mới đăng ký
+  joinedDate?: string;
   avatarUrl?: string;
-  shiftCommitment: string;
+  shiftCommitment?: string;
   completedShifts?: number;
+  updatedAt: string;
+  version?: number;
 }
 
 export type AssetStatus = 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'DAMAGED_L1' | 'DAMAGED_L2' | 'DAMAGED_L3' | 'DAMAGED_L4';
@@ -135,7 +139,7 @@ export type AssetCategory =
   | 'ROBOTICS'
   | 'CONSUMABLE';
 
-export interface Asset {
+export interface Asset extends SyncableEntity {
   id: string;
   code: string; // e.g., AST-FDM-01
   name: string;
@@ -151,9 +155,11 @@ export interface Asset {
   notes: string;
   currentBorrower?: string;
   sealStatus: 'SEALED' | 'UNSEALED' | 'BROKEN';
+  updatedAt: string;
+  version?: number;
 }
 
-export interface ConsumableItem {
+export interface ConsumableItem extends SyncableEntity {
   id: string;
   code?: string;
   name: string;
@@ -165,9 +171,11 @@ export interface ConsumableItem {
   lastRestocked: string;
   subBranch: SubBranchCode;
   specs?: string;
+  updatedAt: string;
+  version?: number;
 }
 
-export interface LoanTicket {
+export interface LoanTicket extends SyncableEntity {
   id: string;
   ticketCode: string; // Form 01 - #LN-2025-001
   borrowerName: string;
@@ -192,9 +200,11 @@ export interface LoanTicket {
     inspectorName: string;
     reconciliationDone: boolean;
   };
+  updatedAt: string;
+  version?: number;
 }
 
-export interface ShiftRoster {
+export interface ShiftRoster extends SyncableEntity {
   id: string;
   date: string;
   shiftNumber?: 1 | 2 | 3;
@@ -224,11 +234,13 @@ export interface ShiftRoster {
   notes?: string;
   verifiedByCctv?: boolean;
   isCompleted: boolean;
+  updatedAt: string;
+  version?: number;
 }
 
 export type HandoverChecklist5S = ShiftRoster['handover5S'];
 
-export interface MeritDemeritLog {
+export interface MeritDemeritLog extends SyncableEntity {
   id: string;
   memberId: string;
   memberName: string;
@@ -240,9 +252,11 @@ export interface MeritDemeritLog {
   timestamp: string;
   recordedBy: string;
   loggedByName?: string;
+  updatedAt: string;
+  version?: number;
 }
 
-export interface IncidentReport {
+export interface IncidentReport extends SyncableEntity {
   id: string;
   code: string; // Form 02 - INC-2025-001
   title: string;
@@ -258,6 +272,8 @@ export interface IncidentReport {
   timestamp: string;
   singlePointOfContact: string; // Rule of SPOC
   compensationStatus?: string;
+  updatedAt: string;
+  version?: number;
 }
 
 export interface RadioChannel {
@@ -269,7 +285,7 @@ export interface RadioChannel {
   allowedSubBranches: SubBranchCode[];
 }
 
-export interface EventStageCue {
+export interface EventStageCue extends SyncableEntity {
   id: string;
   timeOffset: string;
   scene: string;
@@ -277,4 +293,6 @@ export interface EventStageCue {
   responsibleSubBranch: SubBranchCode;
   audioVisualCue: string;
   status: 'PENDING' | 'LIVE' | 'COMPLETED' | 'STANDBY';
+  updatedAt: string;
+  version?: number;
 }
