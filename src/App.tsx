@@ -1,5 +1,8 @@
+// src/App.tsx
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { usePersistentState } from './hooks/usePersistentState';
+import { useSyncedState } from './hooks/useSyncedState';
+import { useWorkspace } from './lib/workspaceContext';
 import {
   OperatingMode,
   EventPhase,
@@ -16,6 +19,7 @@ import {
   TaskStatus,
   ScheduleItem,
   AppNotification,
+  SyncStatus,
 } from './types';
 import {
   INITIAL_MEMBERS,
@@ -29,7 +33,7 @@ import {
 } from './data/initialData';
 
 import { Header } from './components/Header';
-import { Icons, Logo } from './components/brand';
+import { Logo } from './components/brand';
 import { RedCodeModal } from './components/RedCodeModal';
 import { QrAssetModal } from './components/QrAssetModal';
 import { Form01LoanModal } from './components/Form01LoanModal';
@@ -38,6 +42,7 @@ import { MeritRecordModal } from './components/MeritRecordModal';
 import { GoogleWorkspaceModal } from './components/GoogleWorkspaceModal';
 import { AccountSettingsModal } from './components/AccountSettingsModal';
 import { OnboardingOverlay } from './components/OnboardingOverlay';
+import { SyncStatusBadge } from './components/SyncStatusBadge';
 
 import { DashboardTab } from './components/tabs/DashboardTab';
 import { AssetInventoryTab } from './components/tabs/AssetInventoryTab';
@@ -52,6 +57,9 @@ const QrScannerModal = lazy(() => import('./components/QrScannerModal').then((mo
 
 export default function App() {
   const STORAGE_KEY = 'stem_v3_';
+
+  // ─── Workspace & Auth Context ─────────────────────────────────────────────
+  const { workspaceId } = useWorkspace();
 
   const [mode, setMode] = usePersistentState<OperatingMode>(`${STORAGE_KEY}mode`, 'NORMAL');
   const [eventPhase, setEventPhase] = usePersistentState<EventPhase>(`${STORAGE_KEY}event_phase`, 'D_DAY');
@@ -72,8 +80,57 @@ export default function App() {
   const [incidents, setIncidents] = usePersistentState<IncidentReport[]>(`${STORAGE_KEY}incidents`, INITIAL_INCIDENTS);
   const [consumables, setConsumables] = usePersistentState<ConsumableItem[]>(`${STORAGE_KEY}consumables`, INITIAL_CONSUMABLES);
   const [meritLogs, setMeritLogs] = usePersistentState<MeritDemeritLog[]>(`${STORAGE_KEY}merit_logs`, INITIAL_MERIT_LOGS);
-  const [tasks, setTasks] = usePersistentState<TaskItem[]>(`${STORAGE_KEY}tasks`, []);
-  const [schedules, setSchedules] = usePersistentState<ScheduleItem[]>(`${STORAGE_KEY}schedules`, []);
+
+  // ─── Synced State: Tasks & Schedules (Supabase + IndexedDB + Realtime) ────
+  const {
+    data: tasks,
+    setData: setTasks,
+    syncStatus: taskSyncStatus,
+    pendingCount: taskPendingCount,
+    upsertItem: upsertTask,
+    deleteItem: deleteSyncedTask,
+    flushNow: flushTasks,
+  } = useSyncedState<TaskItem & { updatedAt: string }>(
+    {
+      tableName: 'tasks',
+      cacheKey: 'tasks',
+      workspaceId,
+      entity: 'task',
+      writeCommandType: 'UPDATE_TASK',
+      fallback: [],
+      realtime: true,
+    }
+  );
+
+  const {
+    data: schedules,
+    setData: setSchedules,
+    syncStatus: scheduleSyncStatus,
+    pendingCount: schedulePendingCount,
+    upsertItem: upsertSchedule,
+    deleteItem: deleteSyncedSchedule,
+    flushNow: flushSchedules,
+  } = useSyncedState<ScheduleItem & { updatedAt: string }>(
+    {
+      tableName: 'schedules',
+      cacheKey: 'schedules',
+      workspaceId,
+      entity: 'schedule',
+      writeCommandType: 'UPDATE_SCHEDULE',
+      fallback: [],
+      realtime: true,
+    }
+  );
+
+  // Combine sync status across entities
+  const combinedSyncStatus: SyncStatus =
+    taskSyncStatus === 'offline' || scheduleSyncStatus === 'offline'
+      ? 'offline'
+      : taskSyncStatus === 'pending' || scheduleSyncStatus === 'pending'
+        ? 'pending'
+        : 'synced';
+  const combinedPendingCount = taskPendingCount + schedulePendingCount;
+
   const [notifications, setNotifications] = usePersistentState<AppNotification[]>(`${STORAGE_KEY}notifications`, []);
 
   const [isRedCodeOpen, setIsRedCodeOpen] = useState(false);
@@ -346,8 +403,18 @@ export default function App() {
     );
   };
 
-  const handleCreateTask = (task: Omit<TaskItem, 'id' | 'createdAt'>) => {
-    setTasks((current) => [{ ...task, id: generateCode('TASK'), createdAt: new Date().toISOString() }, ...current]);
+  const handleCreateTask = (task: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'version'>) => {
+    const now = new Date().toISOString();
+    const newTask: TaskItem = {
+      ...task,
+      id: generateCode('TASK'),
+      createdAt: now,
+      updatedAt: now,
+      version: 0,
+    };
+    // Optimistic local update + sync to Supabase
+    setTasks((current) => [newTask, ...current]);
+    void upsertTask(newTask);
     showToast(`Đã tạo task [${task.title}]`);
     addNotification('Task mới được tạo', task.title);
   };
@@ -355,7 +422,16 @@ export default function App() {
   const handleMoveTask = (taskId: string, status: TaskStatus) => {
     const task = tasks.find((item) => item.id === taskId);
     if (!task || task.status === status) return;
-    setTasks((current) => current.map((item) => item.id === taskId ? { ...item, status } : item));
+    const now = new Date().toISOString();
+    const updatedTask: TaskItem = {
+      ...task,
+      status,
+      updatedAt: now,
+      version: (task.version ?? 0) + 1,
+    };
+    // Optimistic update
+    setTasks((current) => current.map((item) => item.id === taskId ? updatedTask : item));
+    void upsertTask(updatedTask);
     if (status === 'DONE' && task.status !== 'DONE' && task.assigneeId) {
       const completedEarly = !task.dueDate || Date.now() <= new Date(task.dueDate).getTime();
       const earnedPoints = task.pointsReward + (completedEarly ? 15 : 0);
@@ -365,15 +441,23 @@ export default function App() {
     }
   };
 
-  const handleCreateSchedule = (schedule: Omit<ScheduleItem, 'id'>) => {
+  const handleCreateSchedule = (schedule: Omit<ScheduleItem, 'id' | 'updatedAt' | 'version'>): string | undefined => {
     const hasConflict = schedules.some((current) => (
       current.userId === schedule.userId
       && current.status === 'CONFIRMED'
       && new Date(schedule.startAt).getTime() < new Date(current.endAt).getTime()
-      && new Date(schedule.endAt).getTime() > new Date(current.startAt).getTime()
+      && new Date(schedule.endAt).getTime() > new Date(schedule.startAt).getTime()
     ));
     if (hasConflict) return 'Lịch vừa chọn bị trùng với một lịch đã xác nhận.';
-    setSchedules((current) => [{ ...schedule, id: generateCode('SCHED') }, ...current]);
+    const now = new Date().toISOString();
+    const newSchedule: ScheduleItem = {
+      ...schedule,
+      id: generateCode('SCHED'),
+      updatedAt: now,
+      version: 0,
+    };
+    setSchedules((current) => [newSchedule, ...current]);
+    void upsertSchedule(newSchedule);
     showToast(`Đã xác nhận lịch [${schedule.title}]`);
     addNotification('Lịch mới được xác nhận', `${schedule.title} · ${schedule.userName}`);
     return undefined;
@@ -533,7 +617,10 @@ export default function App() {
             <span className="hidden md:inline">{assets.length} Thiết bị kho</span>
             <span className="hidden md:inline">{loans.filter((l) => l.status === 'ACTIVE').length} Phiếu mượn mở</span>
           </div>
-          <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-3 font-semibold text-slate-700 dark:text-slate-300">
+            {/* Sync status indicator */}
+            <SyncStatusBadge status={combinedSyncStatus} pendingCount={combinedPendingCount} />
+            <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
             <Logo size={12} variant="mark" />
             <span className="hidden sm:inline font-mono">STEM.Lab OS · Minimal Studio</span>
           </div>

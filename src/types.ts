@@ -1,3 +1,23 @@
+// ─── Sync Infrastructure ─────────────────────────────────────────────────────
+
+export interface SyncableEntity {
+  id: string;
+  updatedAt: string; // ISO-8601, used for Last-Write-Wins conflict resolution
+  version?: number;  // Optimistic locking counter
+}
+
+export interface SyncPayload<T> {
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  entity: 'task' | 'schedule' | 'member' | 'asset' | 'loan' | 'incident' | 'roster' | 'consumable' | 'merit_log';
+  data: T;
+  clientTimestamp: number; // Date.now() ms
+  deviceId: string;        // Persistent device identifier
+}
+
+export type SyncStatus = 'synced' | 'pending' | 'offline';
+
+// ─── App Domain Types ─────────────────────────────────────────────────────────
+
 export type OperatingMode = 'NORMAL' | 'EVENT';
 export type EventPhase = 'PRE_EVENT' | 'IN_EVENT' | 'POST_EVENT' | 'D_MINUS_1' | 'D_DAY' | 'D_PLUS_1';
 
@@ -6,7 +26,7 @@ export type TabKey = 'DASHBOARD' | 'ASSETS' | 'LOANS' | 'ROSTER' | 'TASKS' | 'GA
 export type TaskStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
-export interface TaskItem {
+export interface TaskItem extends SyncableEntity {
   id: string;
   title: string;
   description: string;
@@ -17,9 +37,11 @@ export interface TaskItem {
   pointsReward: number;
   dueDate?: string;
   createdAt: string;
+  updatedAt: string;
+  version?: number;
 }
 
-export interface ScheduleItem {
+export interface ScheduleItem extends SyncableEntity {
   id: string;
   title: string;
   userId: string;
@@ -28,6 +50,8 @@ export interface ScheduleItem {
   endAt: string;
   status: 'CONFIRMED' | 'CANCELLED';
   colorCode: string;
+  updatedAt: string;
+  version?: number;
 }
 
 export interface AppNotification {
