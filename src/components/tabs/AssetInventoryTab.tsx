@@ -88,25 +88,25 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
     return assets
       .filter((a) => {
         const matchesSearch =
-          a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.location.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
-        const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
-        const matchesBranch = branchFilter === 'ALL' || a.branchOwner === branchFilter;
+          a?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          a?.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          a?.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          a?.location?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = categoryFilter === 'ALL' || a?.category === categoryFilter;
+        const matchesStatus = statusFilter === 'ALL' || a?.status === statusFilter;
+        const matchesBranch = branchFilter === 'ALL' || a?.branchOwner === branchFilter;
         return matchesSearch && matchesCategory && matchesStatus && matchesBranch;
       })
       .sort((a, b) => {
         let comp = 0;
         if (sortField === 'name') {
-          comp = a.name.localeCompare(b.name, 'vi');
+          comp = (a?.name || '').localeCompare(b?.name || '', 'vi');
         } else if (sortField === 'valueVnd') {
-          comp = a.valueVnd - b.valueVnd;
+          comp = (a?.valueVnd || 0) - (b?.valueVnd || 0);
         } else if (sortField === 'code') {
-          comp = a.code.localeCompare(b.code);
+          comp = (a?.code || '').localeCompare(b?.code || '');
         } else if (sortField === 'status') {
-          comp = a.status.localeCompare(b.status);
+          comp = (a?.status || '').localeCompare(b?.status || '');
         }
         return sortOrder === 'asc' ? comp : -comp;
       });
@@ -171,7 +171,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
-  const totalFilteredValue = filteredAssets.reduce((sum, a) => sum + a.valueVnd, 0);
+  const totalFilteredValue = filteredAssets.reduce((sum, a) => sum + (a?.valueVnd || 0), 0);
 
   return (
     <div className="space-y-4">
@@ -187,7 +187,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
             }`}
           >
             <Box className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-            <span>Danh Mục Thiết Bị ({assets.length})</span>
+            <span>Danh Mục Thiết Bị ({assets?.length || 0})</span>
           </button>
           <button
             onClick={() => setActiveSubTab('CONSUMABLES')}
@@ -198,7 +198,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
             }`}
           >
             <Package className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>Kho Vật Tư Tiêu Hao ({consumables.length})</span>
+            <span>Kho Vật Tư Tiêu Hao ({consumables?.length || 0})</span>
           </button>
         </div>
 
@@ -503,7 +503,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
           {/* Quick Metrics Bar */}
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 font-mono">
             <span>
-              Kết quả: <strong className="text-slate-900 dark:text-white">{filteredAssets.length}</strong> / {assets.length} thiết bị
+              Kết quả: <strong className="text-slate-900 dark:text-white">{filteredAssets.length}</strong> / {assets?.length || 0} thiết bị
             </span>
             <span>
               Tổng giá trị lọc: <strong className="text-slate-900 dark:text-white">{formatVnd(totalFilteredValue)}</strong>
@@ -556,7 +556,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
                     </tr>
                   ) : (
                     filteredAssets.map((asset) => (
-                      <tr key={asset.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <tr key={asset?.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="p-3 font-bold font-mono text-sky-700 dark:text-sky-400">
                           <button
                             onClick={() => onSelectAsset(asset)}
@@ -564,46 +564,46 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
                             title="Bấm xem QR Card & Chi Tiết"
                           >
                             <QrCode className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{asset.code}</span>
+                            <span>{asset?.code}</span>
                           </button>
                         </td>
 
                         <td className="p-3 max-w-xs">
                           <strong className="text-slate-900 dark:text-white block font-semibold text-xs truncate">
-                            {asset.name}
+                            {asset?.name}
                           </strong>
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                            {asset.specifications}
+                            {asset?.specifications}
                           </span>
                         </td>
 
                         <td className="p-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                          {asset.serialNumber}
+                          {asset?.serialNumber}
                         </td>
 
                         <td className="p-3">
                           <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">
-                            {asset.branchOwner}
+                            {asset?.branchOwner}
                           </span>
                         </td>
 
                         <td className="p-3 text-[11px] text-slate-600 dark:text-slate-400">
                           <span className="px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                            {asset.location}
+                            {asset?.location}
                           </span>
                         </td>
 
                         <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
-                          {formatVnd(asset.valueVnd)}
+                          {formatVnd(asset?.valueVnd || 0)}
                         </td>
 
                         <td className="p-3">
-                          {asset.status === 'AVAILABLE' ? (
+                          {asset?.status === 'AVAILABLE' ? (
                             <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 border border-emerald-200 dark:border-emerald-800/60 font-mono">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                               Sẵn Sàng
                             </span>
-                          ) : asset.status === 'IN_USE' ? (
+                          ) : asset?.status === 'IN_USE' ? (
                             <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 font-bold text-[10px] bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 border border-amber-200 dark:border-amber-800/60 font-mono">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                               Đang Mượn
@@ -618,15 +618,15 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
 
                         <td className="p-3 text-center">
                           <button
-                            onClick={() => onToggleSeal(asset.id)}
+                            onClick={() => onToggleSeal(asset?.id)}
                             className={`p-1.5 border transition-colors ${
-                              asset.sealStatus === 'SEALED'
+                              asset?.sealStatus === 'SEALED'
                                 ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border-emerald-200 dark:border-emerald-800/60'
                                 : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border-rose-200 dark:border-rose-800/60'
                             }`}
-                            title={asset.sealStatus === 'SEALED' ? 'Tem niêm phong nguyên vẹn (Đạt)' : 'Đã mở niêm phong'}
+                            title={asset?.sealStatus === 'SEALED' ? 'Tem niêm phong nguyên vẹn (Đạt)' : 'Đã mở niêm phong'}
                           >
-                            {asset.sealStatus === 'SEALED' ? (
+                            {asset?.sealStatus === 'SEALED' ? (
                               <Lock className="w-3.5 h-3.5" />
                             ) : (
                               <Unlock className="w-3.5 h-3.5" />
@@ -636,7 +636,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
 
                         <td className="p-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {asset.status === 'AVAILABLE' && (
+                            {asset?.status === 'AVAILABLE' && (
                               <button
                                 onClick={() => onOpenLoanForAsset(asset)}
                                 className="px-2 py-1 bg-sky-600 hover:bg-sky-700 text-white text-[10px] font-mono font-semibold transition-colors"
@@ -656,8 +656,8 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
 
                             <button
                               onClick={() => {
-                                if (window.confirm(`Xác nhận xóa thiết bị [${asset.name}] (${asset.code}) khỏi kho?`)) {
-                                  onDeleteAsset(asset.id);
+                                if (window.confirm(`Xác nhận xóa thiết bị [${asset?.name}] (${asset?.code}) khỏi kho?`)) {
+                                  onDeleteAsset(asset?.id);
                                 }
                               }}
                               className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
@@ -691,16 +691,16 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
               </div>
             </div>
             <span className="font-mono font-bold text-xs bg-white dark:bg-slate-900 px-2.5 py-1 border border-amber-200 dark:border-amber-800/60 text-slate-900 dark:text-white">
-              {consumables.length} Chủng loại
+              {consumables?.length || 0} Chủng loại
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {consumables.map((item) => {
-              const isLowStock = item.currentStock <= item.minThreshold;
+            {consumables?.map((item) => {
+              const isLowStock = (item?.currentStock || 0) <= (item?.minThreshold || 0);
               return (
                 <div
-                  key={item.id}
+                  key={item?.id}
                   className={`bento-card p-4 transition-all space-y-3 ${
                     isLowStock ? 'border-rose-300 dark:border-rose-800/80 bg-rose-50/30 dark:bg-rose-950/20' : ''
                   }`}
@@ -708,10 +708,10 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold">
-                        {item.subBranch}
+                        {item?.subBranch}
                       </span>
-                      <h4 className="font-semibold text-slate-900 dark:text-white text-xs mt-1">{item.name}</h4>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block">{item.category}</span>
+                      <h4 className="font-semibold text-slate-900 dark:text-white text-xs mt-1">{item?.name}</h4>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block">{item?.category}</span>
                     </div>
 
                     {isLowStock ? (
@@ -731,13 +731,13 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
                     <div>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-mono">Hiện có trong kho</span>
                       <strong className={`font-mono text-base font-bold ${isLowStock ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
-                        {item.currentStock} {item.unit}
+                        {item?.currentStock} {item?.unit}
                       </strong>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-mono">Ngưỡng tối thiểu</span>
                       <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        {item.minThreshold} {item.unit}
+                        {item?.minThreshold} {item?.unit}
                       </span>
                     </div>
                   </div>
@@ -745,12 +745,12 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
                   {/* Stock Adjust Controls */}
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
                     <span className="text-[10px] text-slate-400 font-mono">
-                      Cập nhật: {item.lastRestocked}
+                      Cập nhật: {item?.lastRestocked}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => onUseConsumable(item.id, 1)}
-                        disabled={item.currentStock <= 0}
+                        onClick={() => onUseConsumable(item?.id, 1)}
+                        disabled={(item?.currentStock || 0) <= 0}
                         className="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 text-xs font-mono font-medium flex items-center gap-1 transition-colors"
                         title="Xuất dùng 1 đơn vị"
                       >
@@ -759,7 +759,7 @@ export const AssetInventoryTab: React.FC<AssetInventoryTabProps> = ({
                       </button>
 
                       <button
-                        onClick={() => onRestockConsumable(item.id, 5)}
+                        onClick={() => onRestockConsumable(item?.id, 5)}
                         className="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-mono font-medium flex items-center gap-1 transition-colors"
                         title="Nhập thêm 5 đơn vị"
                       >
