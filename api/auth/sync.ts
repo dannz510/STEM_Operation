@@ -10,7 +10,6 @@ if (!getApps().length) {
   }
 
   try {
-    // Parse JSON trực tiếp hoặc tự động sửa lỗi escape xuống dòng trong Private Key
     let serviceAccount;
     try {
       serviceAccount = JSON.parse(serviceAccountEnv);
@@ -54,20 +53,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await getAuth().verifyIdToken(token);
     const email = decodedToken.email;
+    const uid = decodedToken.uid;
+    const name = decodedToken.name || email?.split('@')[0] || 'Member';
 
     if (!email) {
       return res.status(400).json({ error: 'Token không chứa thông tin email.' });
     }
 
+    // Kiểm tra xem profile đã tồn tại trong Supabase chưa
     const { data: profile, error: dbError } = await supabaseAdmin
       .from('profiles')
-      .select('status')
+      .select('*')
       .eq('email', email)
       .single();
 
-    if (dbError || !profile || profile.status !== 'ACTIVE') {
+    // Nếu chưa tồn tại (Lỗi PGRST116 là code của Supabase khi không tìm thấy bản ghi .single())
+    if (!profile) {
+      const { error: insertError } = await supabaseAdmin
+        .from('profiles')
+        .insert([
+          {
+            uid,
+            email,
+            name,
+            status: 'pending', // Đặt trạng thái chờ duyệt tự động
+            role: 'CADET',     // Role mặc định ban đầu
+          }
+        ]);
+
+      if (insertError) {
+        console.error('Auto-insert profile error:', insertError);
+        return res.status(500).json({ error: 'Không thể khởi tạo yêu cầu cấp quyền.' });
+      }
+
+      return res.status(403).json({
+        success: false,
+        status: 'pending',
+        error: 'Tài khoản đã được ghi nhận! Đang chờ bạn vào Supabase đổi status thành ACTIVE để duyệt.'
+      });
+    }
+
+    if (dbError) {
+      console.error('Supabase query error:', dbError);
+      return res.status(500).json({ error: 'Lỗi truy vấn cơ sở dữ liệu.' });
+    }
+
+    // Nếu đã tồn tại nhưng chưa ACTIVE
+    if (profile.status !== 'ACTIVE') {
       return res.status(403).json({ 
-        error: 'Tài khoản Firebase chưa được ACTIVE hoặc không có quyền truy cập.' 
+        success: false,
+        status: profile.status,
+        error: 'Tài khoản đang ở trạng thái chờ duyệt (Pending). Vui lòng cấp quyền ACTIVE trong cơ sở dữ liệu.' 
       });
     }
 
