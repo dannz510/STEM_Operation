@@ -51,7 +51,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Hỗ trợ cả Authorization Header lẫn JSON Body
     let token = '';
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -75,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Token không chứa thông tin email.' });
     }
 
-    // Truy vấn profile trên Supabase
+    // Truy vấn profile trên Supabase theo email
     const { data: profile, error: dbError } = await supabaseAdmin
       .from('profiles')
       .select('*')
@@ -87,12 +86,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Lỗi truy vấn cơ sở dữ liệu.' });
     }
 
-    // Nếu chưa tồn tại -> tự động tạo bản ghi pending
+    // Nếu chưa tồn tại -> tự động tạo bản ghi pending với id khớp tuyệt đối Firebase UID (TEXT)
     if (!profile) {
       const { error: insertError } = await supabaseAdmin
         .from('profiles')
         .insert([
           {
+            id: uid, // BẮT BUỘC: Đồng nhất ID bảng profiles chính là Firebase UID dạng text
             uid,
             firebase_uid: uid,
             email,
@@ -115,20 +115,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Nếu đã tồn tại nhưng thiếu thông tin định danh hoặc lệch ID, tự động cập nhật
+    if (!profile.firebase_uid || !profile.uid) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ firebase_uid: uid, uid: uid })
+        .eq('email', email);
+    }
+
     if ((profile.status || '').toUpperCase() !== 'ACTIVE') {
       return res.status(403).json({ 
         success: false,
         status: profile.status,
         error: 'Tài khoản đang ở trạng thái chờ duyệt (Pending). Vui lòng cấp quyền ACTIVE trong cơ sở dữ liệu.' 
       });
-    }
-
-    // Cập nhật uid/firebase_uid nếu thiếu
-    if (!profile.firebase_uid && !profile.uid) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ firebase_uid: uid, uid: uid })
-        .eq('id', profile.id);
     }
 
     return res.status(200).json({ 
